@@ -37,7 +37,7 @@ def ask():
     """
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Question: {user_msg}\nKJV Verse: {verse_text}"}
