@@ -1,6 +1,9 @@
 import os
 import threading
 import requests
+from groq import Groq
+GROQ_API_KEY = "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"
+client = Groq(api_key=GROQ_API_KEY)
 from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -44,4 +47,32 @@ def run_bot():
 if __name__ == '__main__':
     t = threading.Thread(target=run_flask)
     t.start()
+    async def explain_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /explain John 3:16")
+        return
+    
+    verse_ref = " ".join(context.args)
+    verse_text = get_verse(verse_ref)
+    
+    if "not found" in verse_text.lower():
+        await update.message.reply_text(verse_text)
+        return
+    
+    await update.message.reply_text(f"Finding explanation for {verse_ref}... ⏳")
+    
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a Bible teacher. Explain KJV Bible verses in simple, friendly, 3-4 sentence language."},
+            {"role": "user", "content": f"Explain this KJV Bible verse: {verse_ref} - {verse_text}"}
+        ],
+        model="llama3-8b-8192",
+    )
+    
+    explanation = chat_completion.choices[0].message.content
+    await update.message.reply_text(f"📖 *{verse_ref}*\n{verse_text}\n\n💡 *Explanation:*\n{explanation}", parse_mode='Markdown')
+
+application.add_handler(CommandHandler("explain", explain_command))
+
+run_bot() <-- your line 50
     run_bot()
