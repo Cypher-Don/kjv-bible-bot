@@ -9,7 +9,7 @@ import requests
 import threading
 
 app = Flask(__name__)
-application = ApplicationBuilder().token("YOUR_TELEGRAM_BOT_TOKEN").build()
+application = ApplicationBuilder().token("8982498067:AAH3mNJIRa7t-j2ZsBCWTEJX_RUFppsNPow").build()
 
 # Replace this with your own verse lookup function
 def get_verse(reference):
