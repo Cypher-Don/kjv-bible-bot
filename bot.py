@@ -1,53 +1,39 @@
-import os
-import threading
-import requests
 from groq import Groq
 GROQ_API_KEY = "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"
 client = Groq(api_key=GROQ_API_KEY)
+
 from flask import Flask
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-BIBLE_API = "https://bible-api.com/"
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+import requests
+import threading
 
 app = Flask(__name__)
+application = ApplicationBuilder().token("YOUR_TELEGRAM_BOT_TOKEN").build()
 
-@app.route('/')
-def home():
-    return "KJV Bible Bot is Live 👑"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# Replace this with your own verse lookup function
+def get_verse(reference):
+    # Example: call Bible API
+    try:
+        url = f"https://bible-api.com/{reference}?translation=kjv"
+        res = requests.get(url)
+        data = res.json()
+        return data['text']
+    except:
+        return "Verse not found. Check the reference e.g. John 3:16"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👑 Welcome! Send me a verse like: John 3:16")
+    await update.message.reply_text("Welcome! Use /verse John 3:16 to get a verse\nUse /explain John 3:16 to get explanation")
 
-async def get_verse(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.message.text
-    await update.message.reply_text(f"Searching for {query}...")
-    
-    try:
-        res = requests.get(BIBLE_API + query + "?translation=kjv")
-        data = res.json()
-        verse = data.get("text", "Verse not found.")
-        ref = data.get("reference", query)
-        await update.message.reply_text(f"*{ref}*\n\n{verse}", parse_mode="Markdown")
-    except:
-        await update.message.reply_text("Sorry, I couldn't find that verse. Try: John 3:16")
+async def verse_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /verse John 3:16")
+        return
+    verse_ref = " ".join(context.args)
+    verse_text = get_verse(verse_ref)
+    await update.message.reply_text(f"📖 *{verse_ref}*\n{verse_text}", parse_mode='Markdown')
 
-def run_bot():
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_verse))
-    print("Bot is running...")
-    application.run_polling()
-
-if __name__ == '__main__':
-    t = threading.Thread(target=run_flask)
-    t.start()
-    async def explain_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def explain_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: /explain John 3:16")
         return
@@ -72,7 +58,18 @@ if __name__ == '__main__':
     explanation = chat_completion.choices[0].message.content
     await update.message.reply_text(f"📖 *{verse_ref}*\n{verse_text}\n\n💡 *Explanation:*\n{explanation}", parse_mode='Markdown')
 
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("verse", verse_command))
 application.add_handler(CommandHandler("explain", explain_command))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, verse_command))
 
-run_bot() <-- your line 50
+def run_flask():
+    app.run(host='0.0.0.0', port=10000)
+
+def run_bot():
+    application.run_polling()
+
+if __name__ == '__main__':
+    t = threading.Thread(target=run_flask)
+    t.start()
     run_bot()
